@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>毎日の習慣</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #24313b;
+      --muted: #70808c;
+      --line: #dfe7e7;
+      --paper: #ffffff;
+      --background: #f3f7f6;
+      --accent: #2c887d;
+      --accent-soft: #e4f1ee;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 48px 20px;
+      color: var(--ink);
+      background: var(--background);
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    main {
+      width: min(100%, 520px);
+      margin: 0 auto;
+      padding: 36px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(36, 49, 59, 0.06);
+    }
+
+    header { margin-bottom: 28px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 6vw, 2.2rem);
+      line-height: 1.3;
+    }
+
+    .date {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .progress {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    progress {
+      width: 100%;
+      height: 8px;
+      overflow: hidden;
+      border: 0;
+      border-radius: 99px;
+      background: var(--accent-soft);
+    }
+
+    progress::-webkit-progress-bar { background: var(--accent-soft); }
+    progress::-webkit-progress-value { background: var(--accent); border-radius: 99px; }
+    progress::-moz-progress-bar { background: var(--accent); border-radius: 99px; }
+
+    .habits {
+      display: grid;
+      gap: 12px;
+      margin: 24px 0 28px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 64px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+    }
+
+    label:hover { border-color: var(--accent); }
+
+    label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    label span { font-size: 1rem; }
+    input:checked + span { color: var(--accent); font-weight: 700; }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: transparent;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--accent); color: var(--accent); }
+
+    @media (max-width: 480px) {
+      body { padding: 20px 12px; }
+      main { padding: 28px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">DAILY HABITS</p>
+      <h1>今日の習慣</h1>
+      <p class="date" id="today"></p>
+    </header>
+
+    <section aria-label="達成状況">
+      <div class="progress">
+        <span id="progressText">0 / 3 完了</span>
+        <span id="progressMessage">まずはひとつ</span>
+      </div>
+      <progress id="progressBar" value="0" max="3">0 / 3</progress>
+    </section>
+
+    <div class="habits">
+      <label>
+        <input type="checkbox" data-habit="exercise">
+        <span>運動</span>
+      </label>
+      <label>
+        <input type="checkbox" data-habit="reading">
+        <span>読書</span>
+      </label>
+      <label>
+        <input type="checkbox" data-habit="sleep">
+        <span>早寝</span>
+      </label>
+    </div>
+
+    <button type="button" id="resetButton">今日の記録をリセット</button>
+  </main>
+
+  <script>
+    const storageKey = `habit-tracker-${new Date().toISOString().slice(0, 10)}`;
+    const checkboxes = [...document.querySelectorAll("input[data-habit]")];
+    const progressBar = document.querySelector("#progressBar");
+    const progressText = document.querySelector("#progressText");
+    const progressMessage = document.querySelector("#progressMessage");
+    const today = document.querySelector("#today");
+
+    today.textContent = new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "long"
+    }).format(new Date());
+
+    const savedHabits = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = savedHabits[checkbox.dataset.habit] === true;
+      checkbox.addEventListener("change", saveHabits);
+    });
+
+    function saveHabits() {
+      const habits = Object.fromEntries(
+        checkboxes.map((checkbox) => [checkbox.dataset.habit, checkbox.checked])
+      );
+      localStorage.setItem(storageKey, JSON.stringify(habits));
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const completed = checkboxes.filter((checkbox) => checkbox.checked).length;
+      progressBar.value = completed;
+      progressBar.textContent = `${completed} / ${checkboxes.length}`;
+      progressText.textContent = `${completed} / ${checkboxes.length} 完了`;
+      progressMessage.textContent = completed === 3 ? "すべて達成" : completed === 0 ? "まずはひとつ" : "いい調子";
+    }
+
+    document.querySelector("#resetButton").addEventListener("click", () => {
+      checkboxes.forEach((checkbox) => { checkbox.checked = false; });
+      saveHabits();
+    });
+
+    updateProgress();
+  </script>
+</body>
+</html>
